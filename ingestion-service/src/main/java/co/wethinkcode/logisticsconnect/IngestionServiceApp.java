@@ -1,9 +1,7 @@
 package co.wethinkcode.logisticsconnect;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import io.javalin.Javalin;
 
@@ -75,6 +73,20 @@ public class IngestionServiceApp {
         return field == null ? "" : field.strip().replaceAll("\\s+", " ");
     }
 
+    private static final Map<String, String> PROVINCE_ALIASES = Map.ofEntries(
+            Map.entry("gauteng", "Gauteng"),
+            Map.entry("western cape", "Western Cape"),
+            Map.entry("kwazulu-natal", "KwaZulu-Natal"),
+            Map.entry("kwa-zulu natal", "KwaZulu-Natal"),
+            Map.entry("kwazulu natal", "KwaZulu-Natal"),
+            Map.entry("free state", "Free State"),
+            Map.entry("eastern cape", "Eastern Cape"),
+            Map.entry("limpopo", "Limpopo"),
+            Map.entry("north west", "North West"),
+            Map.entry("mpumalanga", "Mpumalanga"),
+            Map.entry("northern cape", "Northern Cape")
+    );
+
     static String toTitleCase(String s){
         if (s.isEmpty()) return s;
         StringBuilder sb = new StringBuilder();
@@ -87,15 +99,30 @@ public class IngestionServiceApp {
     }
 
 
-    private static String normalizeSortingCenter(String trim) {
-        return "";
-    }
+    static String normalizeProvince(String raw) {
+        if (raw.isEmpty()) return null; // e.g. H-508 — flag as missing, don't guess
+        String key = raw.toLowerCase(Locale.ROOT);
+        String canonical = PROVINCE_ALIASES.get(key);
+        if (canonical == null) {
+            System.err.println("Unrecognized province spelling, keeping raw: " + raw);
+            return toTitleCase(raw);
+        }
+        return canonical;    }
 
-    private static String normalizeProvince(String trim) {
-        return "";
+
+    private static final Set<String> TRUE_VALUES = Set.of("y", "yes", "true", "1");
+    private static final Set<String> FALSE_VALUES = Set.of("n", "no", "false", "0");
+
+    private static String normalizeSortingCenter(String raw) {
+        return toTitleCase(raw);
     }
-    private static Boolean parseBoolean(String trim, int rowNum) {
-        return TRUE;
+    private static Boolean parseBoolean(String raw, int rowNum) {
+        String v = raw.toLowerCase(Locale.ROOT);
+        if (TRUE_VALUES.contains(v)) return true;
+        if (FALSE_VALUES.contains(v)) return false;
+        System.err.println("Row " + rowNum + ": unresolved active value '" + raw + "', leaving null");
+        // For unknown values
+        return null;
     }
 
 }
