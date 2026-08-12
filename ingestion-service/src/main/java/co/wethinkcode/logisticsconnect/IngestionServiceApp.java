@@ -7,7 +7,8 @@ import java.util.Locale;
 
 import io.javalin.Javalin;
 
-import static com.sun.org.apache.xerces.internal.util.XMLChar.trim;
+import static java.lang.Boolean.TRUE;
+import static java.lang.Boolean.parseBoolean;
 
 public class IngestionServiceApp {
 
@@ -59,6 +60,42 @@ public class IngestionServiceApp {
             throw  new RuntimeException("Failed to load hubs CSV", e);
         }
         return hubs;
+    }
+
+    private static Hub parseAndClean(String[] fields, int rowNum) {
+        Hub hub = new Hub();
+        hub.hubId = trim_spaces(fields[0]).toUpperCase(Locale.ROOT);
+        hub.province = normalizeProvince(trim_spaces(fields[1]));
+        hub.sortingCenter = normalizeSortingCenter(trim_spaces(fields[2]));
+        hub.active = parseBoolean(trim_spaces(fields[3]), rowNum);
+        return hub;    }
+
+    private static String trim_spaces(String field) {
+//      Trims fields by collapsing double-spaces
+        return field == null ? "" : field.strip().replaceAll("\\s+", " ");
+    }
+
+    static String toTitleCase(String s){
+        if (s.isEmpty()) return s;
+        StringBuilder sb = new StringBuilder();
+        for (String w : s.toLowerCase(Locale.ROOT).split(" ")) {
+            if (w.isEmpty()) continue;
+            sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(" ");
+        }
+        return sb.toString().strip();
+
+    }
+
+
+    private static String normalizeSortingCenter(String trim) {
+        return "";
+    }
+
+    private static String normalizeProvince(String trim) {
+        return "";
+    }
+    private static Boolean parseBoolean(String trim, int rowNum) {
+        return TRUE;
     }
 
 }
