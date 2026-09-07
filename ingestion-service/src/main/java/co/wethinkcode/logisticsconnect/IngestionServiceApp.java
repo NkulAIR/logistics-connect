@@ -68,8 +68,8 @@ public class IngestionServiceApp {
         hub.active = parseBoolean(trim_spaces(fields[3]), rowNum);
         return hub;    }
 
+    // Trims fields by collapsing double-spaces
     private static String trim_spaces(String field) {
-//      Trims fields by collapsing double-spaces
         return field == null ? "" : field.strip().replaceAll("\\s+", " ");
     }
 
