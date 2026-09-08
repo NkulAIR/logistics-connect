@@ -130,7 +130,7 @@ public class IngestionServiceApp {
 
     private static Hub parseAndClean(String[] fields, int rowNum) {
         Hub hub = new Hub();
-        hub.hubId = trim_spaces(fields[0]).toUpperCase(Locale.ROOT);
+        hub.hubId = cleanField(fields[0]);
         hub.province = normalizeProvince(trim_spaces(fields[1]));
         hub.sortingCenter = normalizeSortingCenter(trim_spaces(fields[2]));
         hub.active = parseBoolean(trim_spaces(fields[3]), rowNum);
