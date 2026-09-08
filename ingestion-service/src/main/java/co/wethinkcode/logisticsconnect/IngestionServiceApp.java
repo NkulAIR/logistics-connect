@@ -33,31 +33,99 @@ public class IngestionServiceApp {
             return "Hub{" + hubId + ", " + province + ", " + sortingCenter + ", active=" + active + "}";
         }
     }
+
+    private static final Set<String> PLACEHOLDERS = Set.of("", "n/a", "na", "unknown", "null", "-");
+
+    private static String cleanField(String field) {
+        String cleaned = trim_spaces(field);
+        if (PLACEHOLDERS.contains(cleaned.toLowerCase(Locale.ROOT))) {
+            return null; // Convert to proper null handling
+        }
+        return cleaned;
+    }
+
     private static List<Hub> loadAndCleanHubs(String classpathResource) {
-        List<Hub> hubs = new ArrayList<>();
+        Map<String, Hub> hubMap = new LinkedHashMap<>();
+        Set<String> duplicateIds = new HashSet<>();
+        Map<String, List<Integer>> duplicateOccurrences = new HashMap<>();
+        int rowNum = 0;
+
+
         try (InputStream inputStream = IngestionServiceApp.class.getResourceAsStream(classpathResource)){
             if ( inputStream == null) throw new IOException("Resource not found");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-                reader.readLine();
-                String line;
-                int rowNum = 1;
+                String header = reader.readLine();
+                if (header == null) {
+                    throw new IOException("Empty CSV file");
+                }
 
+
+                String line;
                 while((line = reader.readLine()) != null){
                     rowNum ++;
                     if (line.isBlank()) continue;
+
                     String[] fields = line.split(",", -1);
                     if ( fields.length < 4 ) {
                         System.err.println("Skipping malformed row");
                         continue;
                     }
-                    hubs.add(parseAndClean(fields, rowNum));
+
+                    String cleaned0 = cleanField(fields[0]);
+                    String cleaned1 = cleanField(fields[1]);
+                    String cleaned2 = cleanField(fields[2]);
+                    String cleaned3 = cleanField(fields[3]);
+
+
+                    if (isPlaceholder(cleaned0) || isPlaceholder(cleaned1) ||
+                            isPlaceholder(cleaned2) || isPlaceholder(cleaned3)) {
+                        System.err.println("Row " + rowNum + ": Contains placeholder value, skipping: " + line);
+                        continue;
+                    }
+
+                    Hub hub = parseAndClean(fields, rowNum);
+                    if (hub.hubId == null  || hub.hubId.isEmpty()){
+                        System.err.println("Row " + rowNum + ": Skipping - missing hubId");
+                        continue;
+                    }
+                    if (hubMap.containsKey(hub.hubId)){
+                        duplicateIds.add(hub.hubId);
+                        duplicateOccurrences.computeIfAbsent(hub.hubId, k -> new ArrayList<>())
+                                .add(rowNum);
+                        System.err.println("Row " + rowNum + ": Duplicate hubId '" + hub.hubId +
+                                "' found (first seen at row " +
+                                duplicateOccurrences.get(hub.hubId).get(0) + ")");
+
+                        continue;
+
+                    }
+                    hubMap.put(hub.hubId, hub);
+
                 }
+                if (!duplicateIds.isEmpty()) {
+                    System.err.println("\n=== DUPLICATE SUMMARY ===");
+                    System.err.println("Total duplicate hub IDs found: " + duplicateIds.size());
+                    for (String id : duplicateIds) {
+                        System.err.println("  " + id + " appears in rows: " + duplicateOccurrences.get(id));
+                    }
+                    System.err.println("Keeping first occurrence only\n");
+                }
+                System.err.println("Successfully loaded " + hubMap.size() + " unique hubs from " + rowNum + " rows");
+
+
             }
 
         } catch (IOException e){
             throw  new RuntimeException("Failed to load hubs CSV", e);
         }
-        return hubs;
+        return new ArrayList<>(hubMap.values());
+    }
+
+    private static boolean isPlaceholder(String field) {
+        if (PLACEHOLDERS.contains(field)){
+            return true;
+        }
+        return false;
     }
 
     private static Hub parseAndClean(String[] fields, int rowNum) {
@@ -124,5 +192,7 @@ public class IngestionServiceApp {
         // For unknown values
         return null;
     }
+
+
 
 }
