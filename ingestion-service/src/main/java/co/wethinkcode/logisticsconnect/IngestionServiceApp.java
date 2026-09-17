@@ -5,8 +5,6 @@ import java.util.*;
 
 import io.javalin.Javalin;
 
-import static java.lang.Boolean.TRUE;
-import static java.lang.Boolean.parseBoolean;
 
 public class IngestionServiceApp {
 
@@ -48,12 +46,13 @@ public class IngestionServiceApp {
         Map<String, Hub> hubMap = new LinkedHashMap<>();
         Set<String> duplicateIds = new HashSet<>();
         Map<String, List<Integer>> duplicateOccurrences = new HashMap<>();
-        int rowNum = 0;
+        int rowNum = 1;
 
 
         try (InputStream inputStream = IngestionServiceApp.class.getResourceAsStream(classpathResource)){
             if ( inputStream == null) throw new IOException("Resource not found");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+
                 String header = reader.readLine();
                 if (header == null) {
                     throw new IOException("Empty CSV file");
@@ -66,38 +65,33 @@ public class IngestionServiceApp {
                     if (line.isBlank()) continue;
 
                     String[] fields = line.split(",", -1);
-                    if ( fields.length < 4 ) {
-                        System.err.println("Skipping malformed row");
+                    if (fields.length < 4) {
+                        System.err.println("Row " + rowNum + ": malformed (expected 4 fields, got "
+                                + fields.length + "), skipping");
                         continue;
                     }
 
-                    String cleaned0 = cleanField(fields[0]);
-                    String cleaned1 = cleanField(fields[1]);
-                    String cleaned2 = cleanField(fields[2]);
-                    String cleaned3 = cleanField(fields[3]);
+                    String hubId       = cleanField(fields[0]);
+                    String province    = cleanField(fields[1]);
+                    String sortCenter  = cleanField(fields[2]);
+                    String active      = cleanField(fields[3]);
 
 
-                    if (isPlaceholder(cleaned0) || isPlaceholder(cleaned1) ||
-                            isPlaceholder(cleaned2) || isPlaceholder(cleaned3)) {
-                        System.err.println("Row " + rowNum + ": Contains placeholder value, skipping: " + line);
+                    if (hubId == null || province == null || sortCenter == null || active == null) {
+                        System.err.println("Row " + rowNum + ": placeholder/missing value, skipping: " + line);
                         continue;
                     }
 
-                    Hub hub = parseAndClean(fields, rowNum);
-                    if (hub.hubId == null  || hub.hubId.isEmpty()){
-                        System.err.println("Row " + rowNum + ": Skipping - missing hubId");
-                        continue;
-                    }
-                    if (hubMap.containsKey(hub.hubId)){
+                    Hub hub = parseAndClean(hubId, province, sortCenter, active, rowNum);
+                    if (hubMap.containsKey(hub.hubId)) {
                         duplicateIds.add(hub.hubId);
-                        duplicateOccurrences.computeIfAbsent(hub.hubId, k -> new ArrayList<>())
+                        duplicateOccurrences
+                                .computeIfAbsent(hub.hubId, k -> new ArrayList<>())
                                 .add(rowNum);
-                        System.err.println("Row " + rowNum + ": Duplicate hubId '" + hub.hubId +
-                                "' found (first seen at row " +
-                                duplicateOccurrences.get(hub.hubId).get(0) + ")");
-
+                        System.err.println("Row " + rowNum + ": duplicate hubId '" + hub.hubId
+                                + "' (first seen at row "
+                                + duplicateOccurrences.get(hub.hubId).get(0) + "), skipping");
                         continue;
-
                     }
                     hubMap.put(hub.hubId, hub);
 
@@ -110,9 +104,8 @@ public class IngestionServiceApp {
                     }
                     System.err.println("Keeping first occurrence only\n");
                 }
-                System.err.println("Successfully loaded " + hubMap.size() + " unique hubs from " + rowNum + " rows");
-
-
+                System.err.println("Successfully loaded " + hubMap.size()
+                        + " unique hubs from " + (rowNum - 1) + " data rows");
             }
 
         } catch (IOException e){
@@ -121,20 +114,16 @@ public class IngestionServiceApp {
         return new ArrayList<>(hubMap.values());
     }
 
-    private static boolean isPlaceholder(String field) {
-        if (PLACEHOLDERS.contains(field)){
-            return true;
-        }
-        return false;
-    }
 
-    private static Hub parseAndClean(String[] fields, int rowNum) {
+    private static Hub parseAndClean(String hubId, String province,
+                                     String sortingCenter, String active, int rowNum) {
         Hub hub = new Hub();
-        hub.hubId = cleanField(fields[0]);
-        hub.province = normalizeProvince(trim_spaces(fields[1]));
-        hub.sortingCenter = normalizeSortingCenter(trim_spaces(fields[2]));
-        hub.active = parseBoolean(trim_spaces(fields[3]), rowNum);
-        return hub;    }
+        hub.hubId = hubId.toUpperCase(Locale.ROOT);
+        hub.province = normalizeProvince(province);
+        hub.sortingCenter = normalizeSortingCenter(sortingCenter);
+        hub.active = parseBoolean(active, rowNum);
+        return hub;
+    }
 
     // Trims fields by collapsing double-spaces
     private static String trim_spaces(String field) {
@@ -168,7 +157,8 @@ public class IngestionServiceApp {
 
 
     static String normalizeProvince(String raw) {
-        if (raw.isEmpty()) return null; // e.g. H-508 — flag as missing, don't guess
+        if (raw == null || raw.isEmpty()) return null;
+
         String key = raw.toLowerCase(Locale.ROOT);
         String canonical = PROVINCE_ALIASES.get(key);
         if (canonical == null) {
