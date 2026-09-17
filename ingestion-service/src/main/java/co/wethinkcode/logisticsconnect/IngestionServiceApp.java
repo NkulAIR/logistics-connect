@@ -20,11 +20,7 @@ public class IngestionServiceApp {
 
 
     }
-    public static class Hub {
-        String hubId;
-        String province;
-        String sortingCenter;
-        Boolean active;
+    public record Hub(String hubId, String province, String sortingCenter, Boolean active){
 
         @Override
         public String toString() {
@@ -117,11 +113,11 @@ public class IngestionServiceApp {
 
     private static Hub parseAndClean(String hubId, String province,
                                      String sortingCenter, String active, int rowNum) {
-        Hub hub = new Hub();
-        hub.hubId = hubId.toUpperCase(Locale.ROOT);
-        hub.province = normalizeProvince(province);
-        hub.sortingCenter = normalizeSortingCenter(sortingCenter);
-        hub.active = parseBoolean(active, rowNum);
+        Hub hub = new Hub(hubId.toUpperCase(Locale.ROOT),
+        normalizeProvince(province),
+        normalizeSortingCenter(sortingCenter),
+        parseBoolean(active, rowNum));
+
         return hub;
     }
 
