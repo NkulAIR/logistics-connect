@@ -1,4 +1,4 @@
-[//]: # (Verification Code: WTC-46B6RAJE)
+Verification Code: WTC-46B6RAJE
 
 # LogisticsConnect
 
@@ -179,3 +179,5 @@ then add tests under that module's `src/test/java/...` and run:
 ```
 mvn test
 ```
+
+
