@@ -102,6 +102,17 @@ public class IngestionServiceApp {
                 }
                 System.err.println("Successfully loaded " + hubMap.size()
                         + " unique hubs from " + (rowNum - 1) + " data rows");
+
+                Map<String, Hub> semanticMap = new LinkedHashMap<>();
+                for (Hub h : hubMap.values()) {
+                    String key = h.province() + "|" + h.sortingCenter();
+                    semanticMap.merge(key, h, (existing, dup) -> {
+                        if (Boolean.TRUE.equals(existing.active())) return existing;
+                        if (Boolean.TRUE.equals(dup.active()))      return dup;
+                        if (existing.active() != null)              return existing;
+                        return dup;
+                    });
+                }
             }
 
         } catch (IOException e){
