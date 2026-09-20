@@ -2,7 +2,12 @@ package co.wethinkcode.logisticsconnect;
 
 import io.javalin.Javalin;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class DelayStageServiceApp {
+
+    private static final Map<String, Integer> STAGES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         Javalin app = Javalin.create().start(7052);
@@ -11,6 +16,7 @@ public class DelayStageServiceApp {
 
         // TODO (Tracks the Transit Delay Stage (0-8, e.g. weather shutdowns).)
         // Add domain endpoints for delay-stage-service here.
+
     }
 }
 
