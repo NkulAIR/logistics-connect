@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DelayStageServiceApp {
 
     private static final Map<String, Integer> STAGES = new ConcurrentHashMap<>();
+    private static final int MIN_STAGES = 0;
+    private static final int MAX_STAGES = 8;
 
     public static void main(String[] args) {
         Javalin app = Javalin.create().start(7052);
