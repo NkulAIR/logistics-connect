@@ -18,8 +18,14 @@ public class DelayStageServiceApp {
 
         // TODO (Tracks the Transit Delay Stage (0-8, e.g. weather shutdowns).)
         // Add domain endpoints for delay-stage-service here.
+        app.get("/delay-stage/{hubId}", ctx ->{
+            String hubId = ctx.pathParam("hubId").toUpperCase();
+            int stage = STAGES.getOrDefault(hubId, 0);
+            ctx.json(new DelayStage(hubId, stage));
+        });
 
     }
+    public record DelayStage(String hubId, int stage) {}
 }
 
 // MQ TODO: publishes to ActiveMQ topic MqConfig.TOPIC at MqConfig.BROKER_URL (see co.wethinkcode.logisticsconnect.mq.MqConfig)
