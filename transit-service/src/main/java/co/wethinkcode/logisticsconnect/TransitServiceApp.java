@@ -10,6 +10,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 
 public class TransitServiceApp {
 
@@ -17,7 +18,7 @@ public class TransitServiceApp {
     private static final String DELAY_URL = "http://localhost:7052/delay-stage/";
 
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private static final HttpClient CLIENT = HttpClient.newHttpClient();
 
     public static final long BASE_ETA_MINUTES = 120;
