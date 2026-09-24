@@ -36,12 +36,60 @@ public class AlertBotApp {
             MessageConsumer consumer = session.createConsumer(topic);
 
             consumer.setMessageListener(msg -> {
+                try {
+                    if (msg instanceof TextMessage tm) {
+                        String json = tm.getText();
+                        String hubId = extractString(json, "hubId");
+                        int stage = extractInt(json, "stage");
+                        if (hubId == null) return;
 
+                        System.out.println("[MQ] received -> " + json);
 
+                        if (stage >= ALERT_THRESHOLD) {
+                            simulateSocialPost(hubId, stage);
+                        } else {
+                            System.out.println("[alert] " + hubId + " stage " + stage
+                                    + " below threshold " + ALERT_THRESHOLD + " no alert");
 
+                        }
+                    }
 
-            });
+                    } catch (JMSException e) {
+                        System.err.println("[MQ] receive failed: " + e.getMessage());
+                    }
+                });
 
+                System.out.println("[MQ] subscriber listening on topic '" + MqConfig.TOPIC
+                    + "' (alert threshold = " + ALERT_THRESHOLD + ")");
+
+            }
+            private static void simulateSocialPost(String hubId, int stage) {
+                System.out.println("📣 SIMULATED SOCIAL POST");
+                System.out.println("   To:      @LogisticsConnect (public feed)");
+                System.out.println("   Subject: Severe delays at " + hubId);
+                System.out.println("   Body:    \u26a0\ufe0f Delay stage " + stage + "/8 at " + hubId
+                        + ". Expect extended transit times. We will update when the situation improves.");
+                System.out.println("   Status:  POSTED \u2713");
+            }
+            private static String extractString(String json, String key) {
+                String needle = "\"" + key + "\":\"";
+                int i = json.indexOf(needle);
+                if (i < 0) return null;
+                int start = i + needle.length();
+                int end = json.indexOf('"', start);
+                return end < 0 ? null : json.substring(start, end);
+            }
+            private static int extractInt(String json, String key) {
+                String needle = "\"" + key + "\":";
+                int i = json.indexOf(needle);
+                if (i < 0) return 0;
+                int start = i + needle.length();
+                int end = start;
+                while (end < json.length()
+                        && (Character.isDigit(json.charAt(end)) || json.charAt(end) == '-')) {
+                    end++;
+                }
+                return Integer.parseInt(json.substring(start, end));
 
 
     }
