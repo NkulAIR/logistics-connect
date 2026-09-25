@@ -103,7 +103,7 @@ public class TransitServiceApp {
                 try {
                     if (msg instanceof TextMessage tm) {
                         String json = tm.getText();
-                        // Tiny hand-rolled parse — the payload shape is fixed by the producer.
+
                         String hubId = extractString(json, "hubId");
                         int stage    = extractInt(json, "stage");
                         if (hubId != null) {
